@@ -1,0 +1,16 @@
+session_name demo
+mechanism 7
+scale 1
+scaling_function 1
+correlation 0.3
+destination_bias 0
+steps 500
+energy 1000
+resistance_surface res_surface.asc
+risk_surface 0
+source_points source_coords.txt
+destination_points dest_coords.txt
+source_destination_pairing 1
+runs 2
+output 123
+figures 12
