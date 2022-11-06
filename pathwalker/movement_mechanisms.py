@@ -15,18 +15,24 @@ class MovementMechanism(ABC):
     def __init__(
         self,
         ij: Tuple[int, int],
-        surf,
-        corr,
+        surf: np.ndarray,
+        corr: float,
         scale: int,
         fm: Callable,
         dest: Tuple[int, int],
-        deg: int,
+        deg: float,
     ) -> None:
         self.surf = surf
+        if corr < 0 or corr > 1:
+            raise ValueError("Autocorrelation degree must be between 0 and 1!")
         self.corr = corr
         self.scale = scale
         self.fm = fm
         self.dest = dest
+        if deg < 0 or deg > 1:
+            raise ValueError(
+                "Destination bias degree must be between 0 and 1!"
+            )
         self.deg = deg
         # set initial conditions
         self.ij = ij
@@ -73,7 +79,7 @@ class MovementMechanism(ABC):
         """
         pass
 
-    def run_mechanism(self) -> List[List[int], List[int], List[Any]]:
+    def run_mechanism(self) -> List[List[Any]]:
         """
         Run the movement mechanism.
         """
@@ -105,12 +111,12 @@ class Energy(MovementMechanism):
     def __init__(
         self,
         ij: Tuple[int, int],
-        surf,
-        corr,
+        surf: np.ndarray,
+        corr: float,
         scale: int,
         fm: Callable,
         dest: Tuple[int, int],
-        deg: int,
+        deg: float,
         steps: int,
         energy: Union[int, float],
     ):
@@ -183,366 +189,6 @@ class Energy(MovementMechanism):
         self.z1 += self.fm(self.ij, self.surf, self.scale)
         self.save_step(i=self.ij[0], j=self.ij[1], n=n)
 
-
-# E
-def En(
-    ij: Tuple[int, int], energy, steps, surf, risk, corr, scale, fm, dest, deg
-):
-
-    # initial conditions
-    d = []
-    z1 = 0
-    t = 0
-    I = [ij[0]]
-    J = [ij[1]]
-
-    # first step
-    b = np.ones(9)
-    b = (1 - deg) * b / np.sum(b)
-    b = np.concatenate((b, deg * np.array([1])))
-    n = np.random.choice([0, 1, 2, 3, 4, 5, 6, 7, 8, D(ij, dest)[0][0]], p=b)
-    ij = A(ij, A0[n][0], A0[n][1])
-    t += 1
-    z1 += fm(ij, surf, scale)
-    I.append(ij[0])
-    J.append(ij[1])
-    d.append(n)
-
-    # subsequent steps
-    while t < steps and z1 < energy and fm(ij, surf, scale) < np.inf:
-        b = np.ones(9)
-        b = (1 - deg - corr) * b / np.sum(b)
-        b = np.concatenate((b, deg * np.array([1]), corr * np.array([1])))
-        n = np.random.choice(
-            [0, 1, 2, 3, 4, 5, 6, 7, 8, D(ij, dest)[0][0], d[-1]], p=b
-        )
-        ij = A(ij, A0[n][0], A0[n][1])
-        t += 1
-        z1 += fm(ij, surf, scale)
-        I.append(ij[0])
-        J.append(ij[1])
-        d.append(n)
-    return [I, J, [t, z1]]
-
-
-# A
-def Att(ij, energy, steps, surf, risk, corr, scale, fm, dest, deg):
-
-    # initial conditions
-    d = []
-    t = 0
-    I = [ij[0]]
-    J = [ij[1]]
-
-    # first step
-    b = R(ij, surf, scale, fm)
-    if np.sum(b) > 0:
-        b = (1 - deg) * b / np.sum(b)
-        b = np.concatenate((b, deg * np.array([1])))
-        n = np.random.choice(
-            [0, 1, 2, 3, 4, 5, 6, 7, 8, D(ij, dest)[0][0]], p=b
-        )
-        ij = A(ij, A0[n][0], A0[n][1])
-        t += 1
-        I.append(ij[0])
-        J.append(ij[1])
-        d.append(n)
-
-    # subsequent steps
-    while t < steps and fm(ij, surf, scale) < np.inf:
-        b = R(ij, surf, scale, fm)
-        b = (1 - deg - corr) * b / np.sum(b)
-        b = np.concatenate((b, deg * np.array([1]), corr * np.array([1])))
-        n = np.random.choice(
-            [0, 1, 2, 3, 4, 5, 6, 7, 8, D(ij, dest)[0][0], d[-1]], p=b
-        )
-        ij = A(ij, A0[n][0], A0[n][1])
-        t += 1
-        I.append(ij[0])
-        J.append(ij[1])
-        d.append(n)
-    return [I, J, [t]]
-
-
-# R
-def Ri(ij, energy, steps, surf, risk, corr, scale, fm, dest, deg):
-
-    # initial conditions
-    d = []
-    r = 0
-    z = []
-    t = 0
-    I = [ij[0]]
-    J = [ij[1]]
-
-    # first step
-    b = np.ones(9)
-    b = (1 - deg) * b / np.sum(b)
-    b = np.concatenate((b, deg * np.array([1])))
-    n = np.random.choice([0, 1, 2, 3, 4, 5, 6, 7, 8, D(ij, dest)[0][0]], p=b)
-    ij = A(ij, A0[n][0], A0[n][1])
-    t += 1
-
-    if fm(ij, risk, scale) < 1:
-        q = fm(ij, risk, scale)
-        r = np.random.choice([0, 1], p=[1 - q, q])
-    else:
-        q = fm(ij, risk, scale)
-        r = 1
-
-    I.append(ij[0])
-    J.append(ij[1])
-    z.append(q)
-    d.append(n)
-
-    # subsequent steps
-    while t < steps and r == 0 and fm(ij, surf, scale) < np.inf:
-        b = np.ones(9)
-        b = (1 - deg - corr) * b / np.sum(b)
-        b = np.concatenate((b, deg * np.array([1]), corr * np.array([1])))
-        n = np.random.choice(
-            [0, 1, 2, 3, 4, 5, 6, 7, 8, D(ij, dest)[0][0], d[-1]], p=b
-        )
-        ij = A(ij, A0[n][0], A0[n][1])
-        t += 1
-
-        if fm(ij, risk, scale) < 1:
-            q = fm(ij, risk, scale)
-            r = np.random.choice([0, 1], p=[1 - q, q])
-        else:
-            q = fm(ij, risk, scale)
-            r = 1
-
-        I.append(ij[0])
-        J.append(ij[1])
-        z.append(q)
-        d.append(n)
-    return [I, J, [t, sum(z)]]
-
-
-# EA
-def EA(ij, energy, steps, surf, risk, corr, scale, fm, dest, deg):
-
-    # initial conditions
-    d = []
-    t = 0
-    z1 = 0
-    I = [ij[0]]
-    J = [ij[1]]
-
-    # first step
-    b = R(ij, surf, scale, fm)
-    if np.sum(b) > 0:
-        b = (1 - deg) * b / np.sum(b)
-        b = np.concatenate((b, deg * np.array([1])))
-        n = np.random.choice(
-            [0, 1, 2, 3, 4, 5, 6, 7, 8, D(ij, dest)[0][0]], p=b
-        )
-        ij = A(ij, A0[n][0], A0[n][1])
-        t += 1
-        z1 += fm(ij, surf, scale)
-        I.append(ij[0])
-        J.append(ij[1])
-        d.append(n)
-
-    # subsequent steps
-    while z1 < energy and t < steps and fm(ij, surf, scale) < np.inf:
-        b = R(ij, surf, scale, fm)
-        b = (1 - deg - corr) * b / np.sum(b)
-        b = np.concatenate((b, deg * np.array([1]), corr * np.array([1])))
-        n = np.random.choice(
-            [0, 1, 2, 3, 4, 5, 6, 7, 8, D(ij, dest)[0][0], d[-1]], p=b
-        )
-        ij = A(ij, A0[n][0], A0[n][1])
-        t += 1
-        z1 += fm(ij, surf, scale)
-        I.append(ij[0])
-        J.append(ij[1])
-        d.append(n)
-    return [I, J, [t, z1]]
-
-
-# ER
-def ER(ij, energy, steps, surf, risk, corr, scale, fm, dest, deg):
-
-    # initial conditions
-    d = []
-    r = 0
-    z = []
-    z1 = 0
-    t = 0
-    I = [ij[0]]
-    J = [ij[1]]
-
-    # first step
-    b = np.ones(9)
-    b = (1 - deg) * b / np.sum(b)
-    b = np.concatenate((b, deg * np.array([1])))
-    n = np.random.choice([0, 1, 2, 3, 4, 5, 6, 7, 8, D(ij, dest)[0][0]], p=b)
-    ij = A(ij, A0[n][0], A0[n][1])
-    t += 1
-    z1 += fm(ij, surf, scale)
-
-    if fm(ij, risk, scale) < 1:
-        q = fm(ij, risk, scale)
-        r = np.random.choice([0, 1], p=[1 - q, q])
-    else:
-        q = fm(ij, risk, scale)
-        r = 1
-
-    I.append(ij[0])
-    J.append(ij[1])
-    z.append(q)
-    d.append(n)
-
-    # subsequent steps
-    while z1 < energy and r == 0 and fm(ij, surf, scale) < np.inf:
-        b = np.ones(9)
-        b = (1 - deg - corr) * b / np.sum(b)
-        b = np.concatenate((b, deg * np.array([1]), corr * np.array([1])))
-        n = np.random.choice(
-            [0, 1, 2, 3, 4, 5, 6, 7, 8, D(ij, dest)[0][0], d[-1]], p=b
-        )
-        ij = A(ij, A0[n][0], A0[n][1])
-        t += 1
-        z1 += fm(ij, surf, scale)
-
-        if fm(ij, risk, scale) < 1:
-            q = fm(ij, risk, scale)
-            r = np.random.choice([0, 1], p=[1 - q, q])
-        else:
-            q = fm(ij, risk, scale)
-            r = 1
-
-        I.append(ij[0])
-        J.append(ij[1])
-        z.append(q)
-        d.append(n)
-    return [I, J, [t, z1, sum(z)]]
-
-
-# AR
-def AR(ij, energy, steps, surf, risk, corr, scale, fm, dest, deg):
-
-    # initial conditions
-    d = []
-    t = 0
-    r = 0
-    z = []
-    I = [ij[0]]
-    J = [ij[1]]
-
-    # first step
-    b = R(ij, surf, scale, fm)
-    if np.sum(b) > 0:
-        b = (1 - deg) * b / np.sum(b)
-        b = np.concatenate((b, deg * np.array([1])))
-        n = np.random.choice(
-            [0, 1, 2, 3, 4, 5, 6, 7, 8, D(ij, dest)[0][0]], p=b
-        )
-        ij = A(ij, A0[n][0], A0[n][1])
-        t += 1
-
-        if fm(ij, risk, scale) < 1:
-            q = fm(ij, risk, scale)
-            r = np.random.choice([0, 1], p=[1 - q, q])
-        else:
-            q = fm(ij, risk, scale)
-            r = 1
-
-        I.append(ij[0])
-        J.append(ij[1])
-        z.append(q)
-        d.append(n)
-
-    # subsequent steps
-    while t < steps and r == 0 and fm(ij, surf, scale) < np.inf:
-        b = R(ij, surf, scale, fm)
-        b = (1 - deg - corr) * b / np.sum(b)
-        b = np.concatenate((b, deg * np.array([1]), corr * np.array([1])))
-        n = np.random.choice(
-            [0, 1, 2, 3, 4, 5, 6, 7, 8, D(ij, dest)[0][0], d[-1]], p=b
-        )
-        ij = A(ij, A0[n][0], A0[n][1])
-        t += 1
-
-        if fm(ij, risk, scale) < 1:
-            q = fm(ij, risk, scale)
-            r = np.random.choice([0, 1], p=[1 - q, q])
-        else:
-            q = fm(ij, risk, scale)
-            r = 1
-
-        I.append(ij[0])
-        J.append(ij[1])
-        z.append(q)
-        d.append(n)
-    return [I, J, [t, sum(z)]]
-
-
-# EAR
-def EAR(ij, energy, steps, surf, risk, corr, scale, fm, dest, deg):
-
-    # initial conditions
-    d = []
-    t = 0
-    z1 = 0
-    r = 0
-    z = []
-    I = [ij[0]]
-    J = [ij[1]]
-
-    # first step
-    b = R(ij, surf, scale, fm)
-    if np.sum(b) > 0:
-        b = (1 - deg) * b / np.sum(b)
-        b = np.concatenate((b, deg * np.array([1])))
-        n = np.random.choice(
-            [0, 1, 2, 3, 4, 5, 6, 7, 8, D(ij, dest)[0][0]], p=b
-        )
-        ij = A(ij, A0[n][0], A0[n][1])
-        t += 1
-        z1 += fm(ij, surf, scale)
-
-        if fm(ij, risk, scale) < 1:
-            q = fm(ij, risk, scale)
-            r = np.random.choice([0, 1], p=[1 - q, q])
-        else:
-            q = fm(ij, risk, scale)
-            r = 1
-
-        I.append(ij[0])
-        J.append(ij[1])
-        z.append(q)
-        d.append(n)
-
-    # subsequent steps
-    while (
-        z1 < energy and t < steps and r == 0 and fm(ij, surf, scale) < np.inf
-    ):
-        b = R(ij, surf, scale, fm)
-        b = (1 - deg - corr) * b / np.sum(b)
-        b = np.concatenate((b, deg * np.array([1]), corr * np.array([1])))
-        n = np.random.choice(
-            [0, 1, 2, 3, 4, 5, 6, 7, 8, D(ij, dest)[0][0], d[-1]], p=b
-        )
-        ij = A(ij, A0[n][0], A0[n][1])
-        t += 1
-        z1 += fm(ij, surf, scale)
-
-        if fm(ij, risk, scale) < 1:
-            q = fm(ij, risk, scale)
-            r = np.random.choice([0, 1], p=[1 - q, q])
-        else:
-            q = fm(ij, risk, scale)
-            r = 1
-
-        I.append(ij[0])
-        J.append(ij[1])
-        z.append(q)
-        d.append(n)
-    return [I, J, [t, z1, sum(z)]]
-
-
-# parse
-Mech = [En, Att, Ri, EA, ER, AR, EAR]
+    def get_final_data(self) -> List[Any]:
+        """Get the final data used for this mechanism."""
+        return [self.t, self.z1]
