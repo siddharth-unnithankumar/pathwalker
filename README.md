@@ -4,10 +4,10 @@ documentation can be found in the pathwalker directory
 
 ## Setup
 The dependencies required for running `pathwalker` are stored in `requirements.txt`.
-You can install these however you like, but the simplest way is to create a new virtual environment for running pathwalker and installing them into it.
+You can install these however you like, but the simplest way is to create a new virtual environment for running pathwalker and then installing the dependencies into it.
 You can create the environment using the following command (please fill in the path as appropriate):
 ```bash
-python -m venv <your_path_here>
+python3 -m venv <your_path_here>
 ```
 Then activate the environment and install requirements by running
 ```bash
