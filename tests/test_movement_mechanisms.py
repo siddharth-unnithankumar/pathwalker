@@ -26,6 +26,7 @@ def surf() -> np.ndarray:
 
 @pytest.fixture
 def energy_mm(surf) -> Energy:
+    """An instance of the energy movement mechanism."""
     return Energy(
         ij=(0, 0),
         surf=surf,
@@ -49,9 +50,13 @@ def barrier_points() -> List[Tuple[int, int]]:
     return [coord for coord in window(2) if coord not in window(1)]
 
 
-# weirdly, getting different failures when running the same test command
-# are the fixtures being saved between runs?
 def test_Energy(energy_mm, barrier_points):
+    """
+    This test checks that the energy movement mechanism is correctly
+    initialised. It then performs a sequence of timesteps until the conditions
+    are exhausted, and checks that the walker never passes into a barrier
+    region.
+    """
     # test that required parameters are set to initial values
     assert energy_mm.d == []
     assert energy_mm.t == 0
