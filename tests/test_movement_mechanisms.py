@@ -8,8 +8,20 @@ from pathwalker.utils import fmean, window
 
 @pytest.fixture
 def surf() -> np.ndarray:
-    """Resistance surface."""
-    return np.array(((1, 2), (3, 4)))
+    """Resistance surface.
+
+    This surface is a 2D square matrix of ones padded around with a grid of
+    high-resistance points that should not be possible to cross.
+    """
+    return np.array(
+        (
+            (10000, 10000, 10000, 10000, 10000),
+            (10000, 1, 1, 1, 10000),
+            (10000, 1, 1, 1, 10000),
+            (10000, 1, 1, 1, 10000),
+            (10000, 10000, 10000, 10000, 10000),
+        )
+    )
 
 
 @pytest.fixture
@@ -22,7 +34,7 @@ def energy_mm(surf) -> Energy:
         fm=fmean,
         dest=(1, 1),
         deg=0.0,
-        steps=10,
+        steps=100,
         energy=1000,
     )
 
@@ -32,10 +44,9 @@ def barrier_points() -> List[Tuple[int, int]]:
     """
     A list of coordinates that the path should never cross.
 
-    For now we will leave this empty, but it can be modified to help in future
-    integration tests.
+    In this case, it is the outer barrier of high-resistance points.
     """
-    return []
+    return [coord for coord in window(2) if coord not in window(1)]
 
 
 # weirdly, getting different failures when running the same test command
@@ -57,4 +68,6 @@ def test_Energy(energy_mm, barrier_points):
         energy_mm.general_step()
         assert energy_mm.t == last_timestep + 1
         # check that the path doesn't cross any predefined barrier points
-        assert energy_mm.ij not in barrier_points
+        assert (
+            energy_mm.ij not in barrier_points
+        ), f"Landed on barrier point {energy_mm.ij} on timestep {energy_mm.t}!"
