@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+from typing import List, Tuple
 
 from pathwalker.movement_mechanisms import Energy
 from pathwalker.utils import fmean, window
@@ -26,9 +27,20 @@ def energy_mm(surf) -> Energy:
     )
 
 
+@pytest.fixture
+def barrier_points() -> List[Tuple[int, int]]:
+    """
+    A list of coordinates that the path should never cross.
+
+    For now we will leave this empty, but it can be modified to help in future
+    integration tests.
+    """
+    return []
+
+
 # weirdly, getting different failures when running the same test command
 # are the fixtures being saved between runs?
-def test_Energy(energy_mm):
+def test_Energy(energy_mm, barrier_points):
     # test that required parameters are set to initial values
     assert energy_mm.d == []
     assert energy_mm.t == 0
@@ -44,3 +56,5 @@ def test_Energy(energy_mm):
         last_timestep = energy_mm.t
         energy_mm.general_step()
         assert energy_mm.t == last_timestep + 1
+        # check that the path doesn't cross any predefined barrier points
+        assert energy_mm.ij not in barrier_points
