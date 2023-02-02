@@ -42,11 +42,7 @@ def get_sw(ij: Tuple[int, int], surf, scale: int) -> np.ndarray:
     TODO: figure out what this is!
     """
     Aw = [A(ij, i0, j0) for i0, j0 in window(scale)]
-    Sw = np.array(
-        [
-            surf.take(i, mode="wrap").take(j, mode="wrap") for i, j in Aw
-        ]  # use `take` with wrap mode to wrap around indices
-    )
+    Sw = np.array([surf[x] for x in Aw])
     return Sw
 
 
