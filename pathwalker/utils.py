@@ -41,9 +41,12 @@ def get_sw(ij: Tuple[int, int], surf, scale: int) -> np.ndarray:
     """
     TODO: figure out what this is!
     """
-    w = window(scale)
-    Aw = [A(ij, i0, j0) for i0, j0 in w]
-    Sw = np.array([surf[x] for x in Aw])
+    Aw = [A(ij, i0, j0) for i0, j0 in window(scale)]
+    Sw = np.array(
+        [
+            surf.take(i, mode="wrap").take(j, mode="wrap") for i, j in Aw
+        ]  # use `take` with wrap mode to wrap around indices
+    )
     return Sw
 
 
@@ -52,7 +55,7 @@ def fmean(ij: Tuple[int, int], surf, scale: int) -> float:
     Focal mean.
     """
     Sw = get_sw(ij=ij, surf=surf, scale=scale)
-    return Sw.max()
+    return Sw.mean()
 
 
 def fmax(ij: Tuple[int, int], surf, scale: int) -> float:

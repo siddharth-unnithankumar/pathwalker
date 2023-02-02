@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from pathwalker.movement_mechanisms import Energy
-from pathwalker.utils import fmean
+from pathwalker.utils import fmean, window
 
 
 @pytest.fixture
@@ -40,23 +40,7 @@ def test_Energy(energy_mm):
     assert len(energy_mm.d) == 1
     assert energy_mm.t == 1
     # perform steps until condition fails
-    energy_mm.general_step()
-    assert energy_mm.continue_conditions()
-    energy_mm.general_step()
-    assert energy_mm.continue_conditions()
-    energy_mm.general_step()
-    assert energy_mm.continue_conditions()
-    energy_mm.general_step()
-    assert energy_mm.continue_conditions()
-    energy_mm.general_step()
-    assert energy_mm.continue_conditions()
-    energy_mm.general_step()
-    assert energy_mm.continue_conditions()
-    energy_mm.general_step()
-    assert energy_mm.continue_conditions()
-    energy_mm.general_step()
-    assert energy_mm.continue_conditions()
-    energy_mm.general_step()
-    assert energy_mm.continue_conditions()
-    energy_mm.general_step()
-    assert energy_mm.continue_conditions()
+    while energy_mm.continue_conditions():
+        last_timestep = energy_mm.t
+        energy_mm.general_step()
+        assert energy_mm.t == last_timestep + 1
